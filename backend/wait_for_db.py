@@ -11,6 +11,19 @@ async def wait_for_postgres(max_retries=30, retry_interval=2):
     """Wait for PostgreSQL to be ready"""
     db_url = os.getenv('DATABASE_URL')
 
+    # Fallback for local development
+    if not db_url:
+        db_url = 'postgresql://admin:admin123@postgres:5432/market_analytics'
+
+    # Railway uses DATABASE_URL with postgres:// prefix, we need postgresql://
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+
+    # Log connection attempt (without password)
+    from urllib.parse import urlparse
+    parsed = urlparse(db_url)
+    logger.info(f"Database host: {parsed.hostname}, port: {parsed.port}, db: {parsed.path.lstrip('/')}")
+
     for attempt in range(max_retries):
         try:
             logger.info(f"Attempting to connect to PostgreSQL (attempt {attempt + 1}/{max_retries})...")
