@@ -9,10 +9,16 @@ logger = logging.getLogger(__name__)
 
 async def wait_for_postgres(max_retries=30, retry_interval=2):
     """Wait for PostgreSQL to be ready"""
-    db_url = os.getenv('DATABASE_URL')
+    # Try multiple environment variable names that Railway might use
+    db_url = (
+        os.getenv('DATABASE_URL') or
+        os.getenv('DATABASE_PUBLIC_URL') or
+        os.getenv('PGDATABASE_URL')
+    )
 
     # Fallback for local development
     if not db_url:
+        logger.warning("No DATABASE_URL found, using local development settings")
         db_url = 'postgresql://admin:admin123@postgres:5432/market_analytics'
 
     # Railway uses DATABASE_URL with postgres:// prefix, we need postgresql://
@@ -22,7 +28,7 @@ async def wait_for_postgres(max_retries=30, retry_interval=2):
     # Log connection attempt (without password)
     from urllib.parse import urlparse
     parsed = urlparse(db_url)
-    logger.info(f"Database host: {parsed.hostname}, port: {parsed.port}, db: {parsed.path.lstrip('/')}")
+    logger.info(f"Database host: {parsed.hostname}, port: {parsed.port}, db: {parsed.path.lstrip('/')}, user: {parsed.username}")
 
     for attempt in range(max_retries):
         try:
