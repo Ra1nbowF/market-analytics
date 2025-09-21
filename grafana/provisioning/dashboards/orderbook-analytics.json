@@ -1,0 +1,1023 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Real-time order book from all exchanges",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bid_price"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ask_price"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH latest_books AS (\n  SELECT DISTINCT ON (exchange) \n    exchange,\n    bids,\n    asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '2 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  exchange,\n  (bids::jsonb->0->>0)::numeric as bid_price,\n  (bids::jsonb->0->>1)::numeric as bid_volume,\n  (asks::jsonb->0->>0)::numeric as ask_price,\n  (asks::jsonb->0->>1)::numeric as ask_volume,\n  ROUND(((asks::jsonb->0->>0)::numeric - (bids::jsonb->0->>0)::numeric) / (bids::jsonb->0->>0)::numeric * 10000, 2) as spread_bps\nFROM latest_books\nORDER BY exchange",
+          "refId": "A"
+        }
+      ],
+      "title": "Live Order Book - Top of Book (All Exchanges)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Order book depth visualization",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*_bid"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*_ask"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": ["sum"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM (\n  SELECT \n    timestamp AS time,\n    exchange || '_bid' as metric,\n    bid_depth_1pct as value\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND $__timeFilter(timestamp)\n    AND bid_depth_1pct IS NOT NULL\n  \n  UNION ALL\n  \n  SELECT \n    timestamp AS time,\n    exchange || '_ask' as metric,\n    -ask_depth_1pct as value\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND $__timeFilter(timestamp)\n    AND ask_depth_1pct IS NOT NULL\n) AS combined\nORDER BY time, metric",
+          "refId": "A"
+        }
+      ],
+      "title": "Order Book Depth (1% from mid price)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Detailed order book levels",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-text"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "price"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH latest_book AS (\n  SELECT \n    bids,\n    asks\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND exchange = '$exchange_filter'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nbid_levels AS (\n  SELECT \n    'BID' as side,\n    (bid_data->>0)::numeric as price,\n    (bid_data->>1)::numeric as volume,\n    ROW_NUMBER() OVER (ORDER BY (bid_data->>0)::numeric DESC) as level\n  FROM latest_book,\n    jsonb_array_elements(bids::jsonb) as bid_data\n  LIMIT 20\n),\nask_levels AS (\n  SELECT \n    'ASK' as side,\n    (ask_data->>0)::numeric as price,\n    (ask_data->>1)::numeric as volume,\n    ROW_NUMBER() OVER (ORDER BY (ask_data->>0)::numeric ASC) as level\n  FROM latest_book,\n    jsonb_array_elements(asks::jsonb) as ask_data\n  LIMIT 20\n),\ncombined AS (\n  SELECT * FROM bid_levels\n  UNION ALL\n  SELECT * FROM ask_levels\n)\nSELECT * FROM combined\nORDER BY \n  CASE WHEN side = 'BID' THEN 1 ELSE 2 END,\n  CASE WHEN side = 'BID' THEN price END DESC,\n  CASE WHEN side = 'ASK' THEN price END ASC",
+          "refId": "A"
+        }
+      ],
+      "title": "Order Book Levels - ${exchange_filter}",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Comparison of depth across exchanges",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 4,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.9,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH latest_metrics AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    bid_depth_1pct,\n    ask_depth_1pct,\n    bid_depth_2pct,\n    ask_depth_2pct\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '10 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  exchange,\n  COALESCE(bid_depth_1pct, 0) as \"Bid Depth 1%\",\n  COALESCE(ask_depth_1pct, 0) as \"Ask Depth 1%\",\n  COALESCE(bid_depth_2pct, 0) as \"Bid Depth 2%\",\n  COALESCE(ask_depth_2pct, 0) as \"Ask Depth 2%\"\nFROM latest_metrics\nORDER BY exchange",
+          "refId": "A"
+        }
+      ],
+      "title": "Exchange Depth Comparison",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Heatmap of order book imbalance",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": -100
+              },
+              {
+                "color": "yellow",
+                "value": -20
+              },
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "dark-green",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 5,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "cellValues": {},
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "RdYlGn",
+          "steps": 64
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH book_imbalance AS (\n  SELECT \n    timestamp,\n    exchange,\n    CASE \n      WHEN bid_depth_1pct + ask_depth_1pct > 0 THEN\n        ((bid_depth_1pct - ask_depth_1pct) / NULLIF(bid_depth_1pct + ask_depth_1pct, 0)) * 100\n      ELSE 0\n    END as imbalance_pct\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND $__timeFilter(timestamp)\n    AND bid_depth_1pct IS NOT NULL\n    AND ask_depth_1pct IS NOT NULL\n)\nSELECT \n  timestamp as time,\n  exchange as metric,\n  imbalance_pct as value\nFROM book_imbalance\nORDER BY timestamp, exchange",
+          "refId": "A"
+        }
+      ],
+      "title": "Order Book Imbalance Heatmap (Positive = More Bids, Negative = More Asks)",
+      "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Aggregated order book across all exchanges",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "Volume",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*BID.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*ASK.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH latest_books AS (\n  SELECT DISTINCT ON (exchange) \n    exchange,\n    bids::jsonb as bids,\n    asks::jsonb as asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '5 minutes'\n  ORDER BY exchange, timestamp DESC\n),\naggregated_data AS (\n  SELECT \n    ROUND((bid_data->>0)::numeric, 0) as price_level,\n    'Bids' as side,\n    exchange,\n    SUM((bid_data->>1)::numeric) as volume\n  FROM latest_books,\n    jsonb_array_elements(bids) as bid_data\n  GROUP BY price_level, side, exchange\n  \n  UNION ALL\n  \n  SELECT \n    ROUND((ask_data->>0)::numeric, 0) as price_level,\n    'Asks' as side,\n    exchange,\n    SUM((ask_data->>1)::numeric) as volume\n  FROM latest_books,\n    jsonb_array_elements(asks) as ask_data\n  GROUP BY price_level, side, exchange\n),\naggregated_final AS (\n  SELECT \n    price_level,\n    side,\n    SUM(volume) as total_volume,\n    STRING_AGG(exchange || ': ' || ROUND(volume, 4)::text, ', ') as breakdown\n  FROM aggregated_data\n  GROUP BY price_level, side\n)\nSELECT \n  price_level as \"Price\",\n  CASE WHEN side = 'Bids' THEN total_volume ELSE 0 END as \"Total Bids\",\n  CASE WHEN side = 'Asks' THEN total_volume ELSE 0 END as \"Total Asks\",\n  breakdown as \"Exchange Breakdown\"\nFROM aggregated_final\nWHERE price_level > 0\nORDER BY price_level",
+          "refId": "A"
+        }
+      ],
+      "title": "Global Aggregated Order Book (All Exchanges)",
+      "transformations": [],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Market Maker Performance Metrics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Presence %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 80
+                    },
+                    {
+                      "color": "green",
+                      "value": 95
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Spread.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 30
+                    },
+                    {
+                      "color": "red",
+                      "value": 50
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Imbalance"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": -0.1
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -0.3
+                    },
+                    {
+                      "color": "red",
+                      "value": -0.5
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.3
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Liquidity.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 7,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Presence %"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH latest_performance AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    market_presence,\n    avg_spread_bps,\n    min_spread_bps,\n    max_spread_bps,\n    liquidity_2pct,\n    liquidity_4pct,\n    liquidity_8pct,\n    bid_ask_imbalance\n  FROM mm_performance\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '5 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT\n  exchange AS \"Exchange\",\n  ROUND(market_presence::numeric, 2) AS \"Presence %\",\n  ROUND(avg_spread_bps::numeric, 2) AS \"Avg Spread\",\n  ROUND(min_spread_bps::numeric, 2) AS \"Min Spread\",\n  ROUND(max_spread_bps::numeric, 2) AS \"Max Spread\",\n  ROUND(liquidity_2pct::numeric, 4) AS \"Liquidity 2%\",\n  ROUND(liquidity_4pct::numeric, 4) AS \"Liquidity 4%\",\n  ROUND(liquidity_8pct::numeric, 4) AS \"Liquidity 8%\",\n  ROUND(bid_ask_imbalance::numeric, 3) AS \"Imbalance\"\nFROM latest_performance\nORDER BY market_presence DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Market Maker Performance Summary",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Liquidity available at different price levels",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Liquidity",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "scheme",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": ["last"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  timestamp AS time,\n  exchange || ' - 2%' AS metric,\n  depth_2pct_bid + depth_2pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND timestamp > NOW() - INTERVAL '1 hour'\n\nUNION ALL\n\nSELECT\n  timestamp AS time,\n  exchange || ' - 4%' AS metric,\n  depth_4pct_bid + depth_4pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND timestamp > NOW() - INTERVAL '1 hour'\n\nUNION ALL\n\nSELECT\n  timestamp AS time,\n  exchange || ' - 8%' AS metric,\n  depth_8pct_bid + depth_8pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND timestamp > NOW() - INTERVAL '1 hour'\n\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Liquidity Depth Comparison (2%, 4%, 8%)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["crypto", "orderbook"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "PostgreSQL-TimescaleDB",
+          "value": "PostgreSQL-TimescaleDB"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "postgres",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "BTCUSDT",
+          "value": "BTCUSDT"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Symbol",
+        "multi": false,
+        "name": "symbol",
+        "options": [
+          {
+            "selected": true,
+            "text": "BTCUSDT",
+            "value": "BTCUSDT"
+          },
+          {
+            "selected": false,
+            "text": "ETHUSDT",
+            "value": "ETHUSDT"
+          }
+        ],
+        "query": "BTCUSDT,ETHUSDT",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "binance_perps",
+          "value": "binance_perps"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "P528E980D87101141"
+        },
+        "definition": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Exchange",
+        "multi": false,
+        "name": "exchange_filter",
+        "options": [],
+        "query": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Order Book Analytics",
+  "uid": "orderbook-analytics",
+  "version": 1,
+  "weekStart": ""
+}

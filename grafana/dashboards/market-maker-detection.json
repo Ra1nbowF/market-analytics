@@ -1,0 +1,704 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Probability of Market Maker presence based on order patterns",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "green",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 40
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "-- Market Maker Detection Score\n-- Based on order book patterns\nWITH pattern_analysis AS (\n  SELECT \n    exchange,\n    COUNT(CASE WHEN (bids::jsonb->0->>0)::numeric % 100 = 0 THEN 1 END) as round_orders,\n    COUNT(*) as total_snapshots\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '30 minutes'\n  GROUP BY exchange\n)\nSELECT \n  CASE \n    WHEN round_orders > 5 THEN 80\n    WHEN round_orders > 2 THEN 50\n    ELSE 20\n  END as mm_probability\nFROM pattern_analysis\nWHERE exchange = '$exchange_filter'",
+          "refId": "A"
+        }
+      ],
+      "title": "MM Probability Score",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Patterns indicating market maker activity",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.9,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH patterns AS (\n  SELECT \n    'Round Number Orders' as pattern_type,\n    COUNT(CASE \n      WHEN (bids::jsonb->0->>0)::numeric % 100 = 0 \n      OR (asks::jsonb->0->>0)::numeric % 100 = 0 \n      THEN 1 \n    END) as count\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol' \n    AND exchange = '$exchange_filter'\n    AND timestamp > NOW() - INTERVAL '1 hour'\n  \n  UNION ALL\n  \n  SELECT \n    'Large Orders (Walls)' as pattern_type,\n    COUNT(CASE \n      WHEN (bids::jsonb->0->>1)::numeric > 5 \n      OR (asks::jsonb->0->>1)::numeric > 5\n      THEN 1 \n    END) as count\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol' \n    AND exchange = '$exchange_filter'\n    AND timestamp > NOW() - INTERVAL '1 hour'\n  \n  UNION ALL\n  \n  SELECT \n    'Rapid Changes' as pattern_type,\n    COUNT(*) as count\n  FROM (\n    SELECT \n      ob.*,\n      LAG((ob.bids::jsonb->0->>0)::numeric) OVER (ORDER BY ob.timestamp) as prev_bid\n    FROM orderbook_snapshots ob\n    WHERE ob.symbol = '$symbol' \n      AND ob.exchange = '$exchange_filter'\n      AND ob.timestamp > NOW() - INTERVAL '1 hour'\n  ) t\n  WHERE ABS((t.bids::jsonb->0->>0)::numeric - t.prev_bid) > 10\n)\nSELECT * FROM patterns",
+          "refId": "A"
+        }
+      ],
+      "title": "MM Pattern Detection",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Liquidity quality metrics",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  CASE\n    WHEN AVG(spread_bps) < 5 AND AVG(bid_depth_1pct) > 10 THEN 90\n    WHEN AVG(spread_bps) < 10 AND AVG(bid_depth_1pct) > 5 THEN 70\n    WHEN AVG(spread_bps) < 20 THEN 50\n    ELSE 30\n  END as liquidity_score\nFROM mm_metrics\nWHERE symbol = '$symbol' \n  AND exchange = '$exchange_filter'\n  AND timestamp > NOW() - INTERVAL '1 hour'",
+          "refId": "A"
+        }
+      ],
+      "title": "Liquidity Score",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Depth at different price levels from mid",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "Volume (BTC)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bid Depth"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ask Depth"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH latest_data AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    bid_depth_1pct,\n    ask_depth_1pct,\n    bid_depth_2pct,\n    ask_depth_2pct\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '10 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  '0.5%' as price_level,\n  bid_depth_1pct * 0.5 as \"Bid Depth\",\n  -ask_depth_1pct * 0.5 as \"Ask Depth\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nUNION ALL\n\nSELECT \n  '1%' as price_level,\n  bid_depth_1pct as \"Bid Depth\",\n  -ask_depth_1pct as \"Ask Depth\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nUNION ALL\n\nSELECT \n  '2%' as price_level,\n  bid_depth_2pct as \"Bid Depth\",\n  -ask_depth_2pct as \"Ask Depth\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nORDER BY price_level",
+          "refId": "A"
+        }
+      ],
+      "title": "Liquidity Depth Profile",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Symmetric orders on both sides",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 5,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH latest_book AS (\n  SELECT \n    bids::jsonb as bids,\n    asks::jsonb as asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND exchange = '$exchange_filter'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nbid_volumes AS (\n  SELECT \n    (bid_data->>0)::numeric as bid_price,\n    ROUND((bid_data->>1)::numeric, 4) as volume\n  FROM latest_book,\n    jsonb_array_elements(bids) as bid_data\n  LIMIT 10\n),\nask_volumes AS (\n  SELECT \n    (ask_data->>0)::numeric as ask_price,\n    ROUND((ask_data->>1)::numeric, 4) as volume\n  FROM latest_book,\n    jsonb_array_elements(asks) as ask_data\n  LIMIT 10\n)\nSELECT \n  bv.volume as \"Order Size\",\n  bv.bid_price as \"Bid Price\",\n  av.ask_price as \"Ask Price\",\n  av.ask_price - bv.bid_price as \"Spread\",\n  'SYMMETRIC' as \"Type\"\nFROM bid_volumes bv\nJOIN ask_volumes av ON bv.volume = av.volume\nORDER BY bv.volume DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Symmetric Orders Detection",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Trade size distribution patterns",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 70,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 6,
+      "options": {
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "auto",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  timestamp as time,\n  CASE \n    WHEN quantity < 0.1 THEN 'Small (<0.1)'\n    WHEN quantity < 0.5 THEN 'Medium (0.1-0.5)'\n    WHEN quantity < 1 THEN 'Large (0.5-1)'\n    ELSE 'Very Large (>1)'\n  END as metric,\n  1 as value\nFROM trades\nWHERE symbol = '$symbol'\n  AND exchange = '$exchange_filter'\n  AND $__timeFilter(timestamp)\nORDER BY timestamp",
+          "refId": "A"
+        }
+      ],
+      "title": "Trade Size Patterns",
+      "type": "state-timeline"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Spread evolution over time",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Spread (bps)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "min", "max"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  timestamp as time,\n  exchange as metric,\n  spread_bps as value\nFROM mm_metrics\nWHERE symbol = '$symbol'\n  AND $__timeFilter(timestamp)\n  AND spread_bps IS NOT NULL\n  AND spread_bps < 100\nORDER BY timestamp",
+          "refId": "A"
+        }
+      ],
+      "title": "Spread Maintenance Quality",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["market-maker", "detection"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "PostgreSQL-TimescaleDB",
+          "value": "PostgreSQL-TimescaleDB"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "postgres",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "BTCUSDT",
+          "value": "BTCUSDT"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Symbol",
+        "multi": false,
+        "name": "symbol",
+        "options": [
+          {
+            "selected": true,
+            "text": "BTCUSDT",
+            "value": "BTCUSDT"
+          },
+          {
+            "selected": false,
+            "text": "ETHUSDT",
+            "value": "ETHUSDT"
+          }
+        ],
+        "query": "BTCUSDT,ETHUSDT",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "binance_perps",
+          "value": "binance_perps"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "P528E980D87101141"
+        },
+        "definition": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Exchange",
+        "multi": false,
+        "name": "exchange_filter",
+        "options": [],
+        "query": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Market Maker Detection",
+  "uid": "market-maker-detection",
+  "version": 1,
+  "weekStart": ""
+}
