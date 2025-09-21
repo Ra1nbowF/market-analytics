@@ -3,10 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
+        "datasource": "grafana-postgresql-datasource",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -23,10 +20,7 @@
   "liveNow": false,
   "panels": [
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Probability of Market Maker presence based on order patterns",
       "fieldConfig": {
         "defaults": {
@@ -67,7 +61,9 @@
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -81,10 +77,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -97,10 +90,7 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Patterns indicating market maker activity",
       "fieldConfig": {
         "defaults": {
@@ -168,10 +158,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -184,10 +171,7 @@
       "type": "barchart"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Liquidity quality metrics",
       "fieldConfig": {
         "defaults": {
@@ -228,7 +212,9 @@
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -239,10 +225,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -255,10 +238,7 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Depth at different price levels from mid",
       "fieldConfig": {
         "defaults": {
@@ -366,10 +346,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -382,10 +359,7 @@
       "type": "barchart"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Symmetric orders on both sides",
       "fieldConfig": {
         "defaults": {
@@ -423,10 +397,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -439,10 +410,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Trade size distribution patterns",
       "fieldConfig": {
         "defaults": {
@@ -498,10 +466,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
@@ -514,10 +479,7 @@
       "type": "state-timeline"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Spread evolution over time",
       "fieldConfig": {
         "defaults": {
@@ -586,7 +548,11 @@
       "id": 7,
       "options": {
         "legend": {
-          "calcs": ["mean", "min", "max"],
+          "calcs": [
+            "mean",
+            "min",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -598,10 +564,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
@@ -617,7 +580,10 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["market-maker", "detection"],
+  "tags": [
+    "market-maker",
+    "detection"
+  ],
   "templating": {
     "list": [
       {
@@ -671,10 +637,7 @@
           "text": "binance_perps",
           "value": "binance_perps"
         },
-        "datasource": {
-          "type": "postgres",
-          "uid": "P528E980D87101141"
-        },
+        "datasource": "grafana-postgresql-datasource",
         "definition": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
         "hide": 0,
         "includeAll": false,
