@@ -55,15 +55,27 @@ async def lifespan(app: FastAPI):
         raise Exception("Database connection failed")
 
     # Initialize database pool
+    db_url = (
+        os.getenv('DATABASE_URL') or
+        os.getenv('DATABASE_PUBLIC_URL') or
+        os.getenv('PGDATABASE_URL') or
+        'postgresql://admin:admin123@postgres:5432/market_analytics'
+    )
+
+    # Railway uses postgres:// prefix, we need postgresql://
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+
     db_pool = await asyncpg.create_pool(
-        os.getenv('DATABASE_URL'),
+        db_url,
         min_size=5,
         max_size=20
     )
 
     # Initialize Redis
+    redis_url = os.getenv('REDIS_URL') or 'redis://redis:6379'
     redis_client = await redis.from_url(
-        os.getenv('REDIS_URL'),
+        redis_url,
         encoding="utf-8",
         decode_responses=True
     )
