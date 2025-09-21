@@ -605,9 +605,9 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "BTCUSDT",
-          "value": "BTCUSDT"
+          "selected": true,
+          "text": "PYTHUSDT",
+          "value": "PYTHUSDT"
         },
         "hide": 0,
         "includeAll": false,
@@ -617,6 +617,11 @@
         "options": [
           {
             "selected": true,
+            "text": "PYTHUSDT",
+            "value": "PYTHUSDT"
+          },
+          {
+            "selected": false,
             "text": "BTCUSDT",
             "value": "BTCUSDT"
           },
@@ -626,7 +631,7 @@
             "value": "ETHUSDT"
           }
         ],
-        "query": "BTCUSDT,ETHUSDT",
+        "query": "PYTHUSDT,BTCUSDT,ETHUSDT",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
