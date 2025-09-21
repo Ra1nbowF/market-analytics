@@ -3,10 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
+        "datasource": "grafana-postgresql-datasource",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -23,10 +20,7 @@
   "liveNow": false,
   "panels": [
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Real-time order book from all exchanges",
       "fieldConfig": {
         "defaults": {
@@ -107,10 +101,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -123,10 +114,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Order book depth visualization",
       "fieldConfig": {
         "defaults": {
@@ -219,7 +207,9 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": ["sum"],
+          "calcs": [
+            "sum"
+          ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -231,10 +221,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
@@ -247,10 +234,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Detailed order book levels",
       "fieldConfig": {
         "defaults": {
@@ -293,10 +277,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -309,10 +290,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Comparison of depth across exchanges",
       "fieldConfig": {
         "defaults": {
@@ -380,10 +358,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -396,10 +371,7 @@
       "type": "barchart"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Heatmap of order book imbalance",
       "fieldConfig": {
         "defaults": {
@@ -467,7 +439,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": true
@@ -487,10 +459,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
@@ -503,10 +472,7 @@
       "type": "heatmap"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Aggregated order book across all exchanges",
       "fieldConfig": {
         "defaults": {
@@ -611,10 +577,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -628,10 +591,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Market Maker Performance Metrics",
       "fieldConfig": {
         "defaults": {
@@ -828,10 +788,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -844,10 +801,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Liquidity available at different price levels",
       "fieldConfig": {
         "defaults": {
@@ -905,7 +859,9 @@
       "id": 8,
       "options": {
         "legend": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -917,10 +873,7 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
@@ -936,7 +889,10 @@
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["crypto", "orderbook"],
+  "tags": [
+    "crypto",
+    "orderbook"
+  ],
   "templating": {
     "list": [
       {
@@ -990,10 +946,7 @@
           "text": "binance_perps",
           "value": "binance_perps"
         },
-        "datasource": {
-          "type": "postgres",
-          "uid": "P528E980D87101141"
-        },
+        "datasource": "grafana-postgresql-datasource",
         "definition": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
         "hide": 0,
         "includeAll": false,

@@ -3,10 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
+        "datasource": "grafana-postgresql-datasource",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -23,10 +20,7 @@
   "liveNow": false,
   "panels": [
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Raw market data from all exchanges",
       "fieldConfig": {
         "defaults": {
@@ -102,10 +96,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -118,10 +109,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Raw trades data",
       "fieldConfig": {
         "defaults": {
@@ -225,10 +213,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -241,10 +226,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Raw orderbook snapshots",
       "fieldConfig": {
         "defaults": {
@@ -287,10 +269,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -303,10 +282,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Binance perpetuals specific data",
       "fieldConfig": {
         "defaults": {
@@ -382,10 +358,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -398,10 +371,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Long/Short ratio data",
       "fieldConfig": {
         "defaults": {
@@ -483,10 +453,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -499,10 +466,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Market Maker performance metrics",
       "fieldConfig": {
         "defaults": {
@@ -584,10 +548,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -600,10 +561,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Liquidity depth at different price levels",
       "fieldConfig": {
         "defaults": {
@@ -646,10 +604,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -662,10 +617,7 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
+      "datasource": "grafana-postgresql-datasource",
       "description": "Market Maker detection metrics",
       "fieldConfig": {
         "defaults": {
@@ -708,10 +660,7 @@
       "pluginVersion": "9.5.1",
       "targets": [
         {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
+          "datasource": "grafana-postgresql-datasource",
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -727,7 +676,10 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["raw-data", "database"],
+  "tags": [
+    "raw-data",
+    "database"
+  ],
   "templating": {
     "list": [
       {
