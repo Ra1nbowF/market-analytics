@@ -93,7 +93,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM (\n  SELECT \n    timestamp AS \"time\",\n    exchange || '_bid' as metric,\n    bid_price as value\n  FROM market_data\n  WHERE \n    symbol = '$symbol' AND\n    bid_price > 0 AND ask_price > 0 AND\n    $__timeFilter(timestamp)\n  \n  UNION ALL\n  \n  SELECT \n    timestamp AS \"time\",\n    exchange || '_ask' as metric,\n    ask_price as value\n  FROM market_data\n  WHERE \n    symbol = '$symbol' AND\n    bid_price > 0 AND ask_price > 0 AND\n    $__timeFilter(timestamp)\n) AS combined\nORDER BY time, metric",
+          "rawSql": "SELECT * FROM (\n  SELECT \n    timestamp AS \"time\",\n    exchange || '_bid' as metric,\n    bid_price as value\n  FROM market_data\n  WHERE \n    symbol = '$symbol' AND ('$exchange_view' = '__all' OR exchange = '$exchange_view') AND\n    bid_price > 0 AND ask_price > 0 AND\n    $__timeFilter(timestamp)\n  \n  UNION ALL\n  \n  SELECT \n    timestamp AS \"time\",\n    exchange || '_ask' as metric,\n    ask_price as value\n  FROM market_data\n  WHERE \n    symbol = '$symbol' AND ('$exchange_view' = '__all' OR exchange = '$exchange_view') AND\n    bid_price > 0 AND ask_price > 0 AND\n    $__timeFilter(timestamp)\n) AS combined\nORDER BY time, metric",
           "refId": "A",
           "select": [
             [
@@ -175,7 +175,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT \n  exchange,\n  AVG((ask_price - bid_price) / NULLIF(bid_price, 0) * 10000) as spread_bps\nFROM market_data\nWHERE \n  symbol = '$symbol' AND\n  timestamp > NOW() - INTERVAL '5 minutes'\nGROUP BY exchange",
+          "rawSql": "SELECT \n  exchange,\n  AVG((ask_price - bid_price) / NULLIF(bid_price, 0) * 10000) as spread_bps\nFROM market_data\nWHERE \n  symbol = '$symbol' AND ('$exchange_view' = '__all' OR exchange = '$exchange_view') AND\n  timestamp > NOW() - INTERVAL '5 minutes'\nGROUP BY exchange",
           "refId": "A",
           "select": [
             [
@@ -197,7 +197,7 @@
           ]
         }
       ],
-      "title": "Current Spread (Basis Points)",
+      "title": "Current Spread - ${exchange_view}",
       "type": "gauge"
     },
     {
@@ -274,11 +274,11 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT \n  timestamp AS \"time\",\n  'Volume' as metric,\n  volume_24h as value\nFROM market_data\nWHERE \n  symbol = '$symbol' AND\n  exchange = 'binance_perps' AND\n  $__timeFilter(timestamp)\nORDER BY timestamp",
+          "rawSql": "SELECT \n  timestamp AS \"time\",\n  'Volume' as metric,\n  volume_24h as value\nFROM market_data\nWHERE \n  symbol = '$symbol' AND\n  ('$exchange_view' = '__all' OR exchange = '$exchange_view') AND\n  $__timeFilter(timestamp)\nORDER BY timestamp",
           "refId": "A"
         }
       ],
-      "title": "24H Trading Volume",
+      "title": "24H Trading Volume (${exchange_view})",
       "type": "timeseries"
     },
     {
@@ -722,6 +722,55 @@
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All Exchanges",
+          "value": "__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "includeAllValue": "__all",
+        "label": "Exchange View",
+        "multi": false,
+        "name": "exchange_view",
+        "options": [
+          {
+            "selected": true,
+            "text": "All Exchanges",
+            "value": "__all"
+          },
+          {
+            "selected": false,
+            "text": "Binance Perps",
+            "value": "binance_perps"
+          },
+          {
+            "selected": false,
+            "text": "Binance Spot",
+            "value": "binance_spot"
+          },
+          {
+            "selected": false,
+            "text": "KuCoin",
+            "value": "kucoin"
+          },
+          {
+            "selected": false,
+            "text": "Gate.io",
+            "value": "gate"
+          },
+          {
+            "selected": false,
+            "text": "Bitget",
+            "value": "bitget"
+          }
+        ],
+        "query": "__all,binance_perps,binance_spot,kucoin,gate,bitget",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
       }
     ]
   },
@@ -731,7 +780,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Crypto Market Analytics",
+  "title": "Market Analytics Dashboard",
   "uid": "crypto-market-analytics",
   "version": 1,
   "weekStart": ""
