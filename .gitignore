@@ -66,3 +66,6 @@ grafana-storage/
 tmp/
 temp/
 *.tmp
+
+# Isolated DEX/onchain components (not for production)
+isolated_dex_onchain/

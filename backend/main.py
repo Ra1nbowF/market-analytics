@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 # Import exchange connectors
 from exchanges.binance_perps import BinancePerpsConnector
-from exchanges.binance_spot import BinanceSpotConnector
+from analytics.trader_analytics import TraderAnalytics
 from exchanges.bitget import BitgetConnector
 from exchanges.gate import GateConnector
 from exchanges.kucoin import KucoinConnector
@@ -80,31 +80,40 @@ async def lifespan(app: FastAPI):
         decode_responses=True
     )
 
-    # Initialize exchange connectors
-    exchanges = {
-        'binance_perps': BinancePerpsConnector(
-            api_key=os.getenv('BINANCE_API_KEY'),
-            api_secret=os.getenv('BINANCE_SECRET')
-        ),
-        'binance_spot': BinanceSpotConnector(
-            api_key=os.getenv('BINANCE_API_KEY'),
-            api_secret=os.getenv('BINANCE_SECRET')
-        ),
-        'bitget': BitgetConnector(
-            api_key=os.getenv('BITGET_API_KEY'),
-            api_secret=os.getenv('BITGET_SECRET'),
-            passphrase=os.getenv('BITGET_PASSPHRASE')
-        ),
-        'gate': GateConnector(
-            api_key=os.getenv('GATE_API_KEY'),
-            api_secret=os.getenv('GATE_SECRET')
-        ),
-        'kucoin': KucoinConnector(
-            api_key=os.getenv('KUCOIN_API_KEY'),
-            api_secret=os.getenv('KUCOIN_SECRET'),
-            passphrase=os.getenv('KUCOIN_PASSPHRASE')
-        )
-    }
+    # Initialize exchange connectors - only enable those with valid config
+    exchanges = {}
+
+    # Always enable Binance (has public endpoints)
+    exchanges['binance_perps'] = BinancePerpsConnector(
+        api_key=os.getenv('BINANCE_API_KEY'),
+        api_secret=os.getenv('BINANCE_SECRET')
+    )
+
+
+    # Enable exchanges with public endpoints (no API key required)
+    # Gate.io - public endpoints work without authentication
+    exchanges['gate'] = GateConnector(
+        api_key=os.getenv('GATE_API_KEY'),
+        api_secret=os.getenv('GATE_SECRET')
+    )
+    logger.info("Gate.io connector enabled (public endpoints)")
+
+    # KuCoin - public endpoints work without authentication
+    exchanges['kucoin'] = KucoinConnector(
+        api_key=os.getenv('KUCOIN_API_KEY'),
+        api_secret=os.getenv('KUCOIN_SECRET'),
+        passphrase=os.getenv('KUCOIN_PASSPHRASE')
+    )
+    logger.info("KuCoin connector enabled (public endpoints)")
+
+    # Bitget - public endpoints work without authentication
+    exchanges['bitget'] = BitgetConnector(
+        api_key=os.getenv('BITGET_API_KEY'),
+        api_secret=os.getenv('BITGET_SECRET'),
+        passphrase=os.getenv('BITGET_PASSPHRASE')
+    )
+    logger.info("Bitget connector enabled (public endpoints)")
+
 
     # Schedule data collection jobs
     scheduler.start()
@@ -198,6 +207,15 @@ def schedule_data_collection():
         max_instances=1
     )
 
+    # Collect trader analytics every 15 minutes
+    scheduler.add_job(
+        collect_trader_analytics,
+        'interval',
+        minutes=15,
+        id='trader_analytics',
+        max_instances=1
+    )
+
 async def collect_all_market_data():
     """Collect market data from all exchanges"""
     symbols = os.getenv('TRACK_SYMBOL', 'BTCUSDT').split(',')
@@ -209,8 +227,6 @@ async def collect_all_market_data():
         for exchange_name, exchange in exchanges.items():
             if exchange_name == 'binance_perps':
                 tasks.append(collect_binance_perps_market(symbol))
-            elif exchange_name == 'binance_spot':
-                tasks.append(collect_binance_spot_market(symbol))
             elif exchange_name == 'bitget':
                 tasks.append(collect_bitget_market(symbol))
             elif exchange_name == 'gate':
@@ -260,8 +276,8 @@ async def collect_binance_perps_market(symbol: str):
                     bid_price,
                     ask_price,
                     float(ticker.get('lastPrice', 0)),
-                    float(ticker.get('volume', 0)),
-                    float(ticker.get('quoteVolume', 0)),
+                    float(ticker.get('quoteVolume', 0)),  # USDT volume as primary
+                    float(ticker.get('volume', 0)),  # BTC volume as quote_volume
                     float(ticker.get('priceChange', 0)),
                     float(ticker.get('priceChangePercent', 0)),
                     float(ticker.get('highPrice', 0)),
@@ -289,10 +305,12 @@ async def collect_binance_perps_market(symbol: str):
     except Exception as e:
         logger.error(f"Error collecting Binance Perps data for {symbol}: {e}")
 
+
 async def collect_binance_spot_market(symbol: str):
-    """Collect Binance Spot market data"""
+    """Collect Binance Spot market data - placeholder for future use"""
+    return
     try:
-        exchange = exchanges['binance_spot']
+        exchange = exchanges.get('binance_spot')  # This won't exist anymore
 
         # Get ticker
         ticker = await exchange.get_ticker(symbol)
@@ -329,12 +347,15 @@ async def collect_binance_spot_market(symbol: str):
         logger.error(f"Error collecting Binance Spot data for {symbol}: {e}")
 
 async def collect_bitget_market(symbol: str):
-    """Collect Bitget market data"""
+    """Collect Bitget market data and trades"""
     try:
         exchange = exchanges['bitget']
 
         # Get ticker and other data
         ticker = await exchange.get_ticker(symbol)
+
+        # Get recent trades
+        trades = await exchange.get_recent_trades(symbol)
 
         # Store in database only if valid
         if ticker:
@@ -355,9 +376,31 @@ async def collect_bitget_market(symbol: str):
                         bid_price,
                         ask_price,
                         float(ticker.get('last', ticker.get('lastPr', 0))),
-                        float(ticker.get('baseVolume', ticker.get('baseVolume', 0))),
+                        float(ticker.get('usdtVolume', ticker.get('quoteVolume', 0))),
                         float(ticker.get('changePercent', ticker.get('changePercentage', 0)))
                     )
+
+                    # Store trades
+                    if trades:
+                        for trade in trades[:100]:  # Store last 100 trades
+                            try:
+                                trade_id = str(trade.get('tradeId', trade.get('id', '')))
+                                if trade_id:  # Only insert if we have a valid trade ID
+                                    await conn.execute("""
+                                        INSERT INTO trades (
+                                            exchange, symbol, timestamp,
+                                            price, quantity, side, trade_id
+                                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                    """,
+                                        'bitget', symbol,
+                                        datetime.fromtimestamp(int(trade.get('ts', 0)) / 1000),
+                                        float(trade.get('price', 0)),
+                                        float(trade.get('size', 0)),
+                                        trade.get('side', 'buy'),
+                                        trade_id
+                                    )
+                            except Exception as e:
+                                logger.debug(f"Error inserting Bitget trade: {e}")
 
         logger.info(f"Collected Bitget data for {symbol}")
 
@@ -365,14 +408,17 @@ async def collect_bitget_market(symbol: str):
         logger.error(f"Error collecting Bitget data for {symbol}: {e}")
 
 async def collect_gate_market(symbol: str):
-    """Collect Gate.io market data"""
+    """Collect Gate.io market data and trades"""
     try:
         exchange = exchanges['gate']
 
         # Get market depth
         depth = await exchange.get_market_depth(symbol)
 
-        # Get trade records
+        # Get ticker for volume and price data
+        ticker = await exchange.get_ticker(symbol)
+
+        # Get recent trades
         trades = await exchange.get_trade_records(symbol)
 
         # Store in database only if valid
@@ -381,19 +427,51 @@ async def collect_gate_market(symbol: str):
             ask_price = float(depth['asks'][0][0]) if depth['asks'] else 0
 
             if bid_price > 0 and ask_price > 0:
+                # Get USDT volume from ticker
+                volume_24h = 0
+                last_price = bid_price
+                if ticker:
+                    volume_24h = float(ticker.get('quote_volume', 0))  # USDT volume
+                    last_price = float(ticker.get('last', bid_price))
+
                 async with db_pool.acquire() as conn:
                     await conn.execute("""
                         INSERT INTO market_data (
                             exchange, symbol, timestamp,
-                            bid_price, ask_price, bid_volume, ask_volume
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            bid_price, ask_price, bid_volume, ask_volume,
+                            volume_24h, last_price
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     """,
                         'gate', symbol, datetime.utcnow(),
                         bid_price,
                         ask_price,
                         float(depth['bids'][0][1]) if depth['bids'] else 0,
-                        float(depth['asks'][0][1]) if depth['asks'] else 0
+                        float(depth['asks'][0][1]) if depth['asks'] else 0,
+                        volume_24h,
+                        last_price
                     )
+
+                    # Store trades
+                    if trades:
+                        for trade in trades[:100]:  # Store last 100 trades
+                            try:
+                                trade_id = str(trade.get('id', ''))
+                                if trade_id:  # Only insert if we have a valid trade ID
+                                    await conn.execute("""
+                                        INSERT INTO trades (
+                                            exchange, symbol, timestamp,
+                                            price, quantity, side, trade_id
+                                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                    """,
+                                        'gate', symbol,
+                                        datetime.fromtimestamp(int(trade.get('create_time', 0))),
+                                        float(trade.get('price', 0)),
+                                        float(trade.get('amount', 0)),
+                                        trade.get('side', 'buy'),
+                                        trade_id
+                                    )
+                            except Exception as e:
+                                logger.debug(f"Error inserting Gate trade: {e}")
 
         logger.info(f"Collected Gate.io data for {symbol}")
 
@@ -401,15 +479,21 @@ async def collect_gate_market(symbol: str):
         logger.error(f"Error collecting Gate.io data for {symbol}: {e}")
 
 async def collect_kucoin_market(symbol: str):
-    """Collect KuCoin market data"""
+    """Collect KuCoin market data and trades"""
     try:
         exchange = exchanges['kucoin']
 
         # Get ticker first (has bid/ask prices)
         ticker = await exchange.get_ticker(symbol)
 
+        # Get 24hr stats for volume
+        stats = await exchange.get_24hr_stats(symbol)
+
         # Get orderbook
         orderbook = await exchange.get_full_orderbook(symbol)
+
+        # Get recent trades
+        trades = await exchange.get_trade_history(symbol)
 
         # Store in database
         if ticker:
@@ -421,16 +505,41 @@ async def collect_kucoin_market(symbol: str):
                     await conn.execute("""
                         INSERT INTO market_data (
                             exchange, symbol, timestamp,
-                            bid_price, ask_price, last_price, bid_volume, ask_volume
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            bid_price, ask_price, last_price, bid_volume, ask_volume, volume_24h
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     """,
                         'kucoin', symbol, datetime.utcnow(),
                         bid_price,
                         ask_price,
                         float(ticker.get('price', 0)),
                         float(ticker.get('bestBidSize', 0)),
-                        float(ticker.get('bestAskSize', 0))
+                        float(ticker.get('bestAskSize', 0)),
+                        float(stats.get('volValue', 0)) if stats else 0  # 24h volume in USDT
                     )
+
+                    # Store trades
+                    if trades:
+                        for trade in trades[:100]:  # Store last 100 trades
+                            try:
+                                trade_id = str(trade.get('sequence', trade.get('tradeId', '')))
+                                # KuCoin time is in nanoseconds
+                                trade_time = int(trade.get('time', 0)) / 1000000000  # Convert ns to seconds
+                                if trade_id and trade_time > 0:  # Only insert if we have valid data
+                                    await conn.execute("""
+                                        INSERT INTO trades (
+                                            exchange, symbol, timestamp,
+                                            price, quantity, side, trade_id
+                                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                    """,
+                                        'kucoin', symbol,
+                                        datetime.fromtimestamp(trade_time),
+                                        float(trade.get('price', 0)),
+                                        float(trade.get('size', 0)),
+                                        trade.get('side', 'buy'),
+                                        trade_id
+                                    )
+                            except Exception as e:
+                                logger.debug(f"Error inserting KuCoin trade: {e}")
 
         logger.info(f"Collected KuCoin data for {symbol}")
 
@@ -620,6 +729,21 @@ async def collect_binance_perps_data():
         except Exception as e:
             logger.error(f"Error collecting Binance Perps data for {symbol}: {e}")
 
+async def collect_trader_analytics():
+    """Collect and analyze trader data - placeholder for future use"""
+    try:
+        analyzer = TraderAnalytics()
+        await analyzer.initialize()
+
+        # Run the complete analysis pipeline
+        await analyzer.run_analysis(db_pool)
+
+        await analyzer.cleanup()
+        logger.info("Trader analytics collection completed")
+
+    except Exception as e:
+        logger.error(f"Error collecting trader analytics: {e}")
+
 async def collect_whale_data():
     """Collect whale data from Bitget"""
     symbols = os.getenv('TRACK_SYMBOL', 'BTCUSDT').split(',')
@@ -631,7 +755,23 @@ async def collect_whale_data():
             whale_flow = await exchange.get_whale_net_flow(symbol)
             fund_flow = await exchange.get_spot_fund_flow(symbol)
 
-            if whale_flow or fund_flow:
+            # Handle list response from whale_flow
+            if whale_flow and isinstance(whale_flow, list) and len(whale_flow) > 0:
+                whale_data = whale_flow[0]  # Get first item from list
+            elif whale_flow and isinstance(whale_flow, dict):
+                whale_data = whale_flow
+            else:
+                whale_data = None
+
+            # Handle fund_flow similarly
+            if fund_flow and isinstance(fund_flow, list) and len(fund_flow) > 0:
+                fund_data = fund_flow[0]
+            elif fund_flow and isinstance(fund_flow, dict):
+                fund_data = fund_flow
+            else:
+                fund_data = None
+
+            if whale_data or fund_data:
                 async with db_pool.acquire() as conn:
                     await conn.execute("""
                         INSERT INTO whale_data (
@@ -641,10 +781,10 @@ async def collect_whale_data():
                         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                     """,
                         'bitget', symbol, datetime.utcnow(),
-                        float(whale_flow.get('netFlow', 0)) if whale_flow else 0,
-                        float(whale_flow.get('buyVolume', 0)) if whale_flow else 0,
-                        float(whale_flow.get('sellVolume', 0)) if whale_flow else 0,
-                        float(fund_flow.get('netFlow', 0)) if fund_flow else 0
+                        float(whale_data.get('netFlow', 0)) if whale_data else 0,
+                        float(whale_data.get('buyVolume', 0)) if whale_data else 0,
+                        float(whale_data.get('sellVolume', 0)) if whale_data else 0,
+                        float(fund_data.get('netFlow', 0)) if fund_data else 0
                     )
 
             logger.info(f"Collected whale data for {symbol}")
@@ -714,6 +854,8 @@ async def calculate_mm_metrics():
             logger.error(f"Error calculating MM metrics for {symbol}: {e}")
 
 # API Endpoints
+
+# Include DEX routes
 
 @app.get("/")
 async def root():

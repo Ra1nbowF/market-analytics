@@ -27,238 +27,6 @@
         "type": "postgres",
         "uid": "P528E980D87101141"
       },
-      "description": "Probability of Market Maker presence based on order patterns",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 30
-              },
-              {
-                "color": "green",
-                "value": 70
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true,
-        "text": {
-          "titleSize": 16,
-          "valueSize": 40
-        }
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
-          "format": "table",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "-- Market Maker Detection Score\n-- Based on order book patterns\nWITH pattern_analysis AS (\n  SELECT \n    exchange,\n    COUNT(CASE WHEN (bids::jsonb->0->>0)::numeric % 100 = 0 THEN 1 END) as round_orders,\n    COUNT(*) as total_snapshots\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '30 minutes'\n  GROUP BY exchange\n)\nSELECT \n  CASE \n    WHEN round_orders > 5 THEN 80\n    WHEN round_orders > 2 THEN 50\n    ELSE 20\n  END as mm_probability\nFROM pattern_analysis\nWHERE exchange = '$exchange_filter'",
-          "refId": "A"
-        }
-      ],
-      "title": "MM Probability Score",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
-      "description": "Patterns indicating market maker activity",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 6,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.9,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "orientation": "horizontal",
-        "showValue": "always",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
-          "format": "table",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "WITH patterns AS (\n  SELECT \n    'Round Number Orders' as pattern_type,\n    COUNT(CASE \n      WHEN (bids::jsonb->0->>0)::numeric % 100 = 0 \n      OR (asks::jsonb->0->>0)::numeric % 100 = 0 \n      THEN 1 \n    END) as count\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol' \n    AND exchange = '$exchange_filter'\n    AND timestamp > NOW() - INTERVAL '1 hour'\n  \n  UNION ALL\n  \n  SELECT \n    'Large Orders (Walls)' as pattern_type,\n    COUNT(CASE \n      WHEN (bids::jsonb->0->>1)::numeric > 5 \n      OR (asks::jsonb->0->>1)::numeric > 5\n      THEN 1 \n    END) as count\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol' \n    AND exchange = '$exchange_filter'\n    AND timestamp > NOW() - INTERVAL '1 hour'\n  \n  UNION ALL\n  \n  SELECT \n    'Rapid Changes' as pattern_type,\n    COUNT(*) as count\n  FROM (\n    SELECT \n      ob.*,\n      LAG((ob.bids::jsonb->0->>0)::numeric) OVER (ORDER BY ob.timestamp) as prev_bid\n    FROM orderbook_snapshots ob\n    WHERE ob.symbol = '$symbol' \n      AND ob.exchange = '$exchange_filter'\n      AND ob.timestamp > NOW() - INTERVAL '1 hour'\n  ) t\n  WHERE ABS((t.bids::jsonb->0->>0)::numeric - t.prev_bid) > 10\n)\nSELECT * FROM patterns",
-          "refId": "A"
-        }
-      ],
-      "title": "MM Pattern Detection",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
-      "description": "Liquidity quality metrics",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 50
-              },
-              {
-                "color": "green",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 0
-      },
-      "id": 3,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "P528E980D87101141"
-          },
-          "format": "table",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "SELECT \n  CASE\n    WHEN AVG(spread_bps) < 5 AND AVG(bid_depth_1pct) > 10 THEN 90\n    WHEN AVG(spread_bps) < 10 AND AVG(bid_depth_1pct) > 5 THEN 70\n    WHEN AVG(spread_bps) < 20 THEN 50\n    ELSE 30\n  END as liquidity_score\nFROM mm_metrics\nWHERE symbol = '$symbol' \n  AND exchange = '$exchange_filter'\n  AND timestamp > NOW() - INTERVAL '1 hour'",
-          "refId": "A"
-        }
-      ],
-      "title": "Liquidity Score",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "P528E980D87101141"
-      },
       "description": "Depth at different price levels from mid",
       "fieldConfig": {
         "defaults": {
@@ -268,7 +36,7 @@
           "custom": {
             "axisCenteredZero": true,
             "axisColorMode": "text",
-            "axisLabel": "Volume (BTC)",
+            "axisLabel": "Volume (USDT)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "bars",
@@ -306,7 +74,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "currencyUSD"
         },
         "overrides": [
           {
@@ -349,9 +117,9 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 0
       },
-      "id": 4,
+      "id": 1,
       "options": {
         "legend": {
           "calcs": [],
@@ -374,7 +142,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH latest_data AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    bid_depth_1pct,\n    ask_depth_1pct,\n    bid_depth_2pct,\n    ask_depth_2pct\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '10 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  '0.5%' as price_level,\n  bid_depth_1pct * 0.5 as \"Bid Depth\",\n  -ask_depth_1pct * 0.5 as \"Ask Depth\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nUNION ALL\n\nSELECT \n  '1%' as price_level,\n  bid_depth_1pct as \"Bid Depth\",\n  -ask_depth_1pct as \"Ask Depth\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nUNION ALL\n\nSELECT \n  '2%' as price_level,\n  bid_depth_2pct as \"Bid Depth\",\n  -ask_depth_2pct as \"Ask Depth\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nORDER BY price_level",
+          "rawSql": "WITH latest_data AS (\n  SELECT DISTINCT ON (mm.exchange)\n    mm.exchange,\n    mm.bid_depth_1pct,\n    mm.ask_depth_1pct,\n    mm.bid_depth_2pct,\n    mm.ask_depth_2pct,\n    md.last_price\n  FROM mm_metrics mm\n  JOIN market_data md ON mm.exchange = md.exchange AND mm.symbol = md.symbol\n  WHERE mm.symbol = '$symbol'\n    AND $__timeFilter(mm.timestamp)\n    AND $__timeFilter(md.timestamp)\n  ORDER BY mm.exchange, mm.timestamp DESC\n)\nSELECT \n  '0.5%' as price_level,\n  ROUND((bid_depth_1pct * 0.5 * last_price)::numeric, 0) as \"Bid Depth (USDT)\",\n  ROUND((-ask_depth_1pct * 0.5 * last_price)::numeric, 0) as \"Ask Depth (USDT)\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nUNION ALL\n\nSELECT \n  '1%' as price_level,\n  ROUND((bid_depth_1pct * last_price)::numeric, 0) as \"Bid Depth (USDT)\",\n  ROUND((-ask_depth_1pct * last_price)::numeric, 0) as \"Ask Depth (USDT)\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nUNION ALL\n\nSELECT \n  '2%' as price_level,\n  ROUND((bid_depth_2pct * last_price)::numeric, 0) as \"Bid Depth (USDT)\",\n  ROUND((-ask_depth_2pct * last_price)::numeric, 0) as \"Ask Depth (USDT)\"\nFROM latest_data\nWHERE exchange = '$exchange_filter'\n\nORDER BY price_level",
           "refId": "A"
         }
       ],
@@ -413,9 +181,9 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 0
       },
-      "id": 5,
+      "id": 2,
       "options": {
         "showHeader": true,
         "sortBy": []
@@ -431,7 +199,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH latest_book AS (\n  SELECT \n    bids::jsonb as bids,\n    asks::jsonb as asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND exchange = '$exchange_filter'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nbid_volumes AS (\n  SELECT \n    (bid_data->>0)::numeric as bid_price,\n    ROUND((bid_data->>1)::numeric, 4) as volume\n  FROM latest_book,\n    jsonb_array_elements(bids) as bid_data\n  LIMIT 10\n),\nask_volumes AS (\n  SELECT \n    (ask_data->>0)::numeric as ask_price,\n    ROUND((ask_data->>1)::numeric, 4) as volume\n  FROM latest_book,\n    jsonb_array_elements(asks) as ask_data\n  LIMIT 10\n)\nSELECT \n  bv.volume as \"Order Size\",\n  bv.bid_price as \"Bid Price\",\n  av.ask_price as \"Ask Price\",\n  av.ask_price - bv.bid_price as \"Spread\",\n  'SYMMETRIC' as \"Type\"\nFROM bid_volumes bv\nJOIN ask_volumes av ON bv.volume = av.volume\nORDER BY bv.volume DESC",
+          "rawSql": "WITH latest_book AS (\n  SELECT \n    bids::jsonb as bids,\n    asks::jsonb as asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND exchange = '$exchange_filter'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nlatest_price AS (\n  SELECT last_price\n  FROM market_data\n  WHERE symbol = '$symbol'\n    AND exchange = '$exchange_filter'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nbid_volumes AS (\n  SELECT \n    (bid_data->>0)::numeric as bid_price,\n    ROUND((bid_data->>1)::numeric * (SELECT last_price FROM latest_price), 2) as usd_value\n  FROM latest_book,\n    jsonb_array_elements(bids) as bid_data\n  LIMIT 10\n),\nask_volumes AS (\n  SELECT \n    (ask_data->>0)::numeric as ask_price,\n    ROUND((ask_data->>1)::numeric * (SELECT last_price FROM latest_price), 2) as usd_value\n  FROM latest_book,\n    jsonb_array_elements(asks) as ask_data\n  LIMIT 10\n)\nSELECT \n  bv.usd_value as \"Order Size (USDT)\",\n  bv.bid_price as \"Bid Price\",\n  av.ask_price as \"Ask Price\",\n  ROUND((av.ask_price - bv.bid_price)::numeric, 2) as \"Spread\",\n  'SYMMETRIC' as \"Type\"\nFROM bid_volumes bv\nJOIN ask_volumes av ON bv.usd_value = av.usd_value\nORDER BY bv.usd_value DESC",
           "refId": "A"
         }
       ],
@@ -470,7 +238,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -478,23 +246,29 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 10
       },
-      "id": 6,
+      "id": 3,
       "options": {
-        "alignValue": "left",
+        "barRadius": 0,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
         "legend": {
+          "calcs": ["sum"],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
-        "mergeValues": true,
-        "rowHeight": 0.9,
+        "orientation": "vertical",
         "showValue": "auto",
+        "stacking": "normal",
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        }
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
       },
       "targets": [
         {
@@ -506,12 +280,120 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT \n  timestamp as time,\n  CASE \n    WHEN quantity < 0.1 THEN 'Small (<0.1)'\n    WHEN quantity < 0.5 THEN 'Medium (0.1-0.5)'\n    WHEN quantity < 1 THEN 'Large (0.5-1)'\n    ELSE 'Very Large (>1)'\n  END as metric,\n  1 as value\nFROM trades\nWHERE symbol = '$symbol'\n  AND exchange = '$exchange_filter'\n  AND $__timeFilter(timestamp)\nORDER BY timestamp",
+          "rawSql": "SELECT \n  $__timeGroupAlias(timestamp, 5m),\n  CASE \n    WHEN quantity * price < 1000 THEN 'Small (<1K USDT)'\n    WHEN quantity * price < 10000 THEN 'Medium (1K-10K USDT)'\n    WHEN quantity * price < 100000 THEN 'Large (10K-100K USDT)'\n    ELSE 'Very Large (>100K USDT)'\n  END as metric,\n  COUNT(*) as value\nFROM trades\nWHERE symbol = '$symbol'\n  AND CASE \n    WHEN '$exchange_filter' = '__all' THEN true\n    ELSE exchange = '$exchange_filter'\n  END\n  AND $__timeFilter(timestamp)\nGROUP BY time, metric\nORDER BY time",
           "refId": "A"
         }
       ],
-      "title": "Trade Size Patterns",
-      "type": "state-timeline"
+      "title": "Trade Size Distribution",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P528E980D87101141"
+      },
+      "description": "Detailed breakdown of trade sizes and calculations",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_usd_value"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_usd_volume"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "percentage"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 4,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "count"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P528E980D87101141"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH trade_stats AS (\n  SELECT \n    CASE \n      WHEN quantity * price < 1000 THEN 'Small (<1K USDT)'\n      WHEN quantity * price < 10000 THEN 'Medium (1K-10K USDT)'\n      WHEN quantity * price < 100000 THEN 'Large (10K-100K USDT)'\n      ELSE 'Very Large (>100K USDT)'\n    END as size_category,\n    COUNT(*) as count,\n    AVG(quantity * price) as avg_usdt_value,\n    SUM(quantity * price) as total_usdt_volume,\n    MIN(quantity * price) as min_usdt_size,\n    MAX(quantity * price) as max_usdt_size\n  FROM trades\n  WHERE symbol = '$symbol'\n    AND CASE \n      WHEN '$exchange_filter' = '__all' THEN true\n      ELSE exchange = '$exchange_filter'\n    END\n    AND $__timeFilter(timestamp)\n  GROUP BY size_category\n)\nSELECT \n  size_category as \"Size Category\",\n  count as \"Trade Count\",\n  ROUND(avg_usdt_value::numeric, 2) as \"Avg USDT Value\",\n  ROUND(total_usdt_volume::numeric, 2) as \"Total USDT Volume\",\n  ROUND(100.0 * count / SUM(count) OVER (), 1) as \"Percentage\",\n  ROUND(min_usdt_size::numeric, 2) as \"Min USDT Size\",\n  ROUND(max_usdt_size::numeric, 2) as \"Max USDT Size\"\nFROM trade_stats\nORDER BY \n  CASE size_category\n    WHEN 'Small (<1K USDT)' THEN 1\n    WHEN 'Medium (1K-10K USDT)' THEN 2\n    WHEN 'Large (10K-100K USDT)' THEN 3\n    ELSE 4\n  END",
+          "refId": "A"
+        }
+      ],
+      "title": "Trade Size Calculation Details",
+      "type": "table"
     },
     {
       "datasource": {
@@ -579,14 +461,18 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 24,
+        "x": 0,
         "y": 18
       },
-      "id": 7,
+      "id": 5,
       "options": {
         "legend": {
-          "calcs": ["mean", "min", "max"],
+          "calcs": [
+            "mean",
+            "min",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -606,7 +492,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT \n  timestamp as time,\n  exchange as metric,\n  spread_bps as value\nFROM mm_metrics\nWHERE symbol = '$symbol'\n  AND $__timeFilter(timestamp)\n  AND spread_bps IS NOT NULL\n  AND spread_bps < 100\nORDER BY timestamp",
+          "rawSql": "SELECT \n  timestamp as time,\n  exchange as metric,\n  spread_bps as value\nFROM mm_metrics\nWHERE symbol = '$symbol'\n  AND CASE \n    WHEN '$exchange_filter' = '__all' THEN true\n    ELSE exchange = '$exchange_filter'\n  END\n  AND $__timeFilter(timestamp)\n  AND spread_bps IS NOT NULL\n  AND spread_bps < 100\nORDER BY timestamp",
           "refId": "A"
         }
       ],
@@ -617,7 +503,10 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["market-maker", "detection"],
+  "tags": [
+    "market-maker",
+    "detection"
+  ],
   "templating": {
     "list": [
       {
@@ -639,7 +528,7 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "BTCUSDT",
           "value": "BTCUSDT"
         },
@@ -653,36 +542,31 @@
             "selected": true,
             "text": "BTCUSDT",
             "value": "BTCUSDT"
-          },
-          {
-            "selected": false,
-            "text": "ETHUSDT",
-            "value": "ETHUSDT"
           }
         ],
-        "query": "BTCUSDT,ETHUSDT",
+        "query": "BTCUSDT",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
       },
       {
         "current": {
-          "selected": false,
-          "text": "binance_perps",
-          "value": "binance_perps"
+          "selected": true,
+          "text": "pancakeswap",
+          "value": "pancakeswap"
         },
         "datasource": {
           "type": "postgres",
           "uid": "P528E980D87101141"
         },
-        "definition": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
+        "definition": "SELECT '__all' as exchange UNION ALL SELECT DISTINCT exchange FROM trades WHERE symbol = '$symbol' ORDER BY exchange",
         "hide": 0,
         "includeAll": false,
         "label": "Exchange",
         "multi": false,
         "name": "exchange_filter",
         "options": [],
-        "query": "SELECT DISTINCT exchange FROM orderbook_snapshots WHERE symbol = '$symbol'",
+        "query": "SELECT '__all' as exchange UNION ALL SELECT DISTINCT exchange FROM trades WHERE symbol = '$symbol' ORDER BY exchange",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

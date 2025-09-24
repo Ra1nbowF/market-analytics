@@ -1,22 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker-compose:*)",
-      "Bash(docker-compose up:*)",
-      "Bash(docker logs:*)",
-      "Bash(python:*)",
-      "Bash(docker restart:*)",
-      "Bash(curl:*)",
-      "Bash(docker exec:*)",
-      "Bash(cat:*)",
-      "Bash(git init:*)",
-      "Bash(git config:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git remote add:*)",
-      "Bash(git branch:*)",
-      "Bash(git push:*)",
-      "Bash(pip install:*)"
+      "Bash(echo:*)",
+      "Bash(docker cp:*)",
+      "WebFetch(domain:developers.binance.com)",
+      "WebFetch(domain:www.bitget.com)",
+      "WebFetch(domain:www.gate.com)",
+      "WebFetch(domain:www.kucoin.com)",
+      "Bash(PGPASSWORD=zcePuQAopNvkXSuudTUMqZMJTfzOuApd psql -h turntable.proxy.rlwy.net -U postgres -p 56429 -d railway -t)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []

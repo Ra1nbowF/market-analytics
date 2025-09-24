@@ -727,7 +727,10 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["raw-data", "database"],
+  "tags": [
+    "raw-data",
+    "database"
+  ],
   "templating": {
     "list": [
       {

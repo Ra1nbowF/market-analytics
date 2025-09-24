@@ -1,0 +1,230 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "${datasource}",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Universal dashboard that works with both local and production datasources",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Price",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "mean"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM (\n  SELECT \n    timestamp AS \"time\",\n    exchange || '_bid' as metric,\n    bid_price as value\n  FROM market_data\n  WHERE \n    symbol = '$symbol' AND ('$exchange_view' = '__all' OR exchange = '$exchange_view') AND\n    bid_price > 0 AND ask_price > 0 AND\n    $__timeFilter(timestamp)\n  \n  UNION ALL\n  \n  SELECT \n    timestamp AS \"time\",\n    exchange || '_ask' as metric,\n    ask_price as value\n  FROM market_data\n  WHERE \n    symbol = '$symbol' AND ('$exchange_view' = '__all' OR exchange = '$exchange_view') AND\n    bid_price > 0 AND ask_price > 0 AND\n    $__timeFilter(timestamp)\n) AS combined\nORDER BY time, metric",
+          "refId": "A"
+        }
+      ],
+      "title": "Real-time Bid/Ask Prices",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "crypto",
+    "market-analytics",
+    "universal"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "postgres",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "PYTHUSDT",
+          "value": "PYTHUSDT"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Symbol",
+        "multi": false,
+        "name": "symbol",
+        "options": [
+          {
+            "selected": true,
+            "text": "PYTHUSDT",
+            "value": "PYTHUSDT"
+          },
+          {
+            "selected": false,
+            "text": "BTCUSDT",
+            "value": "BTCUSDT"
+          },
+          {
+            "selected": false,
+            "text": "ETHUSDT",
+            "value": "ETHUSDT"
+          }
+        ],
+        "query": "PYTHUSDT,BTCUSDT,ETHUSDT",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All Exchanges",
+          "value": "__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "includeAllValue": "__all",
+        "label": "Exchange View",
+        "multi": false,
+        "name": "exchange_view",
+        "options": [
+          {
+            "selected": true,
+            "text": "All Exchanges",
+            "value": "__all"
+          },
+          {
+            "selected": false,
+            "text": "Binance Perps",
+            "value": "binance_perps"
+          },
+          {
+            "selected": false,
+            "text": "Binance Spot",
+            "value": "binance_spot"
+          },
+          {
+            "selected": false,
+            "text": "KuCoin",
+            "value": "kucoin"
+          },
+          {
+            "selected": false,
+            "text": "Gate.io",
+            "value": "gate"
+          },
+          {
+            "selected": false,
+            "text": "Bitget",
+            "value": "bitget"
+          }
+        ],
+        "query": "__all,binance_perps,binance_spot,kucoin,gate,bitget",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Market Analytics - Universal",
+  "uid": "market-analytics-universal",
+  "version": 1,
+  "weekStart": ""
+}

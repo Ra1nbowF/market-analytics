@@ -115,7 +115,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH latest_books AS (\n  SELECT DISTINCT ON (exchange) \n    exchange,\n    bids,\n    asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '2 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  exchange,\n  (bids::jsonb->0->>0)::numeric as bid_price,\n  (bids::jsonb->0->>1)::numeric as bid_volume,\n  (asks::jsonb->0->>0)::numeric as ask_price,\n  (asks::jsonb->0->>1)::numeric as ask_volume,\n  ROUND(((asks::jsonb->0->>0)::numeric - (bids::jsonb->0->>0)::numeric) / (bids::jsonb->0->>0)::numeric * 10000, 2) as spread_bps\nFROM latest_books\nORDER BY exchange",
+          "rawSql": "WITH latest_books AS (\n  SELECT DISTINCT ON (exchange) \n    exchange,\n    bids,\n    asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND $__timeFilter(timestamp)\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  exchange,\n  (bids::jsonb->0->>0)::numeric as bid_price,\n  (bids::jsonb->0->>1)::numeric as bid_volume,\n  (asks::jsonb->0->>0)::numeric as ask_price,\n  (asks::jsonb->0->>1)::numeric as ask_volume,\n  ROUND(((asks::jsonb->0->>0)::numeric - (bids::jsonb->0->>0)::numeric) / (bids::jsonb->0->>0)::numeric * 10000, 2) as spread_bps\nFROM latest_books\nORDER BY exchange",
           "refId": "A"
         }
       ],
@@ -219,7 +219,9 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": ["sum"],
+          "calcs": [
+            "sum"
+          ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -388,7 +390,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH latest_metrics AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    bid_depth_1pct,\n    ask_depth_1pct,\n    bid_depth_2pct,\n    ask_depth_2pct\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '10 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  exchange,\n  COALESCE(bid_depth_1pct, 0) as \"Bid Depth 1%\",\n  COALESCE(ask_depth_1pct, 0) as \"Ask Depth 1%\",\n  COALESCE(bid_depth_2pct, 0) as \"Bid Depth 2%\",\n  COALESCE(ask_depth_2pct, 0) as \"Ask Depth 2%\"\nFROM latest_metrics\nORDER BY exchange",
+          "rawSql": "WITH latest_metrics AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    bid_depth_1pct,\n    ask_depth_1pct,\n    bid_depth_2pct,\n    ask_depth_2pct\n  FROM mm_metrics\n  WHERE symbol = '$symbol'\n    AND $__timeFilter(timestamp)\n  ORDER BY exchange, timestamp DESC\n)\nSELECT \n  exchange,\n  COALESCE(bid_depth_1pct, 0) as \"Bid Depth 1%\",\n  COALESCE(ask_depth_1pct, 0) as \"Ask Depth 1%\",\n  COALESCE(bid_depth_2pct, 0) as \"Bid Depth 2%\",\n  COALESCE(ask_depth_2pct, 0) as \"Ask Depth 2%\"\nFROM latest_metrics\nORDER BY exchange",
           "refId": "A"
         }
       ],
@@ -467,7 +469,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": true
@@ -619,7 +621,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH latest_books AS (\n  SELECT DISTINCT ON (exchange) \n    exchange,\n    bids::jsonb as bids,\n    asks::jsonb as asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '5 minutes'\n  ORDER BY exchange, timestamp DESC\n),\naggregated_data AS (\n  SELECT \n    ROUND((bid_data->>0)::numeric, 0) as price_level,\n    'Bids' as side,\n    exchange,\n    SUM((bid_data->>1)::numeric) as volume\n  FROM latest_books,\n    jsonb_array_elements(bids) as bid_data\n  GROUP BY price_level, side, exchange\n  \n  UNION ALL\n  \n  SELECT \n    ROUND((ask_data->>0)::numeric, 0) as price_level,\n    'Asks' as side,\n    exchange,\n    SUM((ask_data->>1)::numeric) as volume\n  FROM latest_books,\n    jsonb_array_elements(asks) as ask_data\n  GROUP BY price_level, side, exchange\n),\naggregated_final AS (\n  SELECT \n    price_level,\n    side,\n    SUM(volume) as total_volume,\n    STRING_AGG(exchange || ': ' || ROUND(volume, 4)::text, ', ') as breakdown\n  FROM aggregated_data\n  GROUP BY price_level, side\n)\nSELECT \n  price_level as \"Price\",\n  CASE WHEN side = 'Bids' THEN total_volume ELSE 0 END as \"Total Bids\",\n  CASE WHEN side = 'Asks' THEN total_volume ELSE 0 END as \"Total Asks\",\n  breakdown as \"Exchange Breakdown\"\nFROM aggregated_final\nWHERE price_level > 0\nORDER BY price_level",
+          "rawSql": "WITH latest_books AS (\n  SELECT DISTINCT ON (exchange) \n    exchange,\n    bids::jsonb as bids,\n    asks::jsonb as asks,\n    timestamp\n  FROM orderbook_snapshots\n  WHERE symbol = '$symbol'\n    AND $__timeFilter(timestamp)\n  ORDER BY exchange, timestamp DESC\n),\naggregated_data AS (\n  SELECT \n    ROUND((bid_data->>0)::numeric, 0) as price_level,\n    'Bids' as side,\n    exchange,\n    SUM((bid_data->>1)::numeric) as volume\n  FROM latest_books,\n    jsonb_array_elements(bids) as bid_data\n  GROUP BY price_level, side, exchange\n  \n  UNION ALL\n  \n  SELECT \n    ROUND((ask_data->>0)::numeric, 0) as price_level,\n    'Asks' as side,\n    exchange,\n    SUM((ask_data->>1)::numeric) as volume\n  FROM latest_books,\n    jsonb_array_elements(asks) as ask_data\n  GROUP BY price_level, side, exchange\n),\naggregated_final AS (\n  SELECT \n    price_level,\n    side,\n    SUM(volume) as total_volume,\n    STRING_AGG(exchange || ': ' || ROUND(volume, 4)::text, ', ') as breakdown\n  FROM aggregated_data\n  GROUP BY price_level, side\n)\nSELECT \n  price_level as \"Price\",\n  CASE WHEN side = 'Bids' THEN total_volume ELSE 0 END as \"Total Bids\",\n  CASE WHEN side = 'Asks' THEN total_volume ELSE 0 END as \"Total Asks\",\n  breakdown as \"Exchange Breakdown\"\nFROM aggregated_final\nWHERE price_level > 0\nORDER BY price_level",
           "refId": "A"
         }
       ],
@@ -836,7 +838,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH latest_performance AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    market_presence,\n    avg_spread_bps,\n    min_spread_bps,\n    max_spread_bps,\n    liquidity_2pct,\n    liquidity_4pct,\n    liquidity_8pct,\n    bid_ask_imbalance\n  FROM mm_performance\n  WHERE symbol = '$symbol'\n    AND timestamp > NOW() - INTERVAL '5 minutes'\n  ORDER BY exchange, timestamp DESC\n)\nSELECT\n  exchange AS \"Exchange\",\n  ROUND(market_presence::numeric, 2) AS \"Presence %\",\n  ROUND(avg_spread_bps::numeric, 2) AS \"Avg Spread\",\n  ROUND(min_spread_bps::numeric, 2) AS \"Min Spread\",\n  ROUND(max_spread_bps::numeric, 2) AS \"Max Spread\",\n  ROUND(liquidity_2pct::numeric, 4) AS \"Liquidity 2%\",\n  ROUND(liquidity_4pct::numeric, 4) AS \"Liquidity 4%\",\n  ROUND(liquidity_8pct::numeric, 4) AS \"Liquidity 8%\",\n  ROUND(bid_ask_imbalance::numeric, 3) AS \"Imbalance\"\nFROM latest_performance\nORDER BY market_presence DESC",
+          "rawSql": "WITH latest_performance AS (\n  SELECT DISTINCT ON (exchange)\n    exchange,\n    market_presence,\n    avg_spread_bps,\n    min_spread_bps,\n    max_spread_bps,\n    liquidity_2pct,\n    liquidity_4pct,\n    liquidity_8pct,\n    bid_ask_imbalance\n  FROM mm_performance\n  WHERE symbol = '$symbol'\n    AND $__timeFilter(timestamp)\n  ORDER BY exchange, timestamp DESC\n)\nSELECT\n  exchange AS \"Exchange\",\n  ROUND(market_presence::numeric, 2) AS \"Presence %\",\n  ROUND(avg_spread_bps::numeric, 2) AS \"Avg Spread\",\n  ROUND(min_spread_bps::numeric, 2) AS \"Min Spread\",\n  ROUND(max_spread_bps::numeric, 2) AS \"Max Spread\",\n  ROUND(liquidity_2pct::numeric, 4) AS \"Liquidity 2%\",\n  ROUND(liquidity_4pct::numeric, 4) AS \"Liquidity 4%\",\n  ROUND(liquidity_8pct::numeric, 4) AS \"Liquidity 8%\",\n  ROUND(bid_ask_imbalance::numeric, 3) AS \"Imbalance\"\nFROM latest_performance\nORDER BY market_presence DESC",
           "refId": "A"
         }
       ],
@@ -905,7 +907,9 @@
       "id": 8,
       "options": {
         "legend": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
@@ -925,7 +929,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  timestamp AS time,\n  exchange || ' - 2%' AS metric,\n  depth_2pct_bid + depth_2pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND timestamp > NOW() - INTERVAL '1 hour'\n\nUNION ALL\n\nSELECT\n  timestamp AS time,\n  exchange || ' - 4%' AS metric,\n  depth_4pct_bid + depth_4pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND timestamp > NOW() - INTERVAL '1 hour'\n\nUNION ALL\n\nSELECT\n  timestamp AS time,\n  exchange || ' - 8%' AS metric,\n  depth_8pct_bid + depth_8pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND timestamp > NOW() - INTERVAL '1 hour'\n\nORDER BY time",
+          "rawSql": "SELECT\n  timestamp AS time,\n  exchange || ' - 2%' AS metric,\n  depth_2pct_bid + depth_2pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND $__timeFilter(timestamp)\n\nUNION ALL\n\nSELECT\n  timestamp AS time,\n  exchange || ' - 4%' AS metric,\n  depth_4pct_bid + depth_4pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND $__timeFilter(timestamp)\n\nUNION ALL\n\nSELECT\n  timestamp AS time,\n  exchange || ' - 8%' AS metric,\n  depth_8pct_bid + depth_8pct_ask AS value\nFROM liquidity_depth\nWHERE symbol = '$symbol'\n  AND $__timeFilter(timestamp)\n\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -936,7 +940,10 @@
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["crypto", "orderbook"],
+  "tags": [
+    "crypto",
+    "orderbook"
+  ],
   "templating": {
     "list": [
       {
@@ -958,7 +965,7 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "BTCUSDT",
           "value": "BTCUSDT"
         },
@@ -972,14 +979,9 @@
             "selected": true,
             "text": "BTCUSDT",
             "value": "BTCUSDT"
-          },
-          {
-            "selected": false,
-            "text": "ETHUSDT",
-            "value": "ETHUSDT"
           }
         ],
-        "query": "BTCUSDT,ETHUSDT",
+        "query": "BTCUSDT",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"

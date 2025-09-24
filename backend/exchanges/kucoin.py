@@ -68,8 +68,17 @@ class KucoinConnector:
             'Content-Type': 'application/json'
         }
 
-        # Add authentication headers if API key is provided
-        if self.api_key:
+        # Only add authentication for private endpoints
+        # Public market data endpoints don't require authentication
+        is_public_endpoint = any([
+            '/market/orderbook' in endpoint,
+            '/market/histories' in endpoint,
+            '/market/stats' in endpoint,
+            '/market/candles' in endpoint
+        ])
+
+        # Add authentication headers if API key is provided and it's not a public endpoint
+        if self.api_key and not is_public_endpoint:
             body_str = json.dumps(body) if body else ''
             signature = self._sign(timestamp, method, endpoint, body_str)
 
@@ -119,7 +128,8 @@ class KucoinConnector:
     async def get_full_orderbook(self, symbol: str) -> Dict:
         """Get full orderbook (Level 2)"""
         formatted_symbol = self._format_symbol(symbol)
-        endpoint = f"/api/v3/market/orderbook/level2"
+        # Use v1 endpoint which doesn't require authentication
+        endpoint = f"/api/v1/market/orderbook/level2_100"
         params = {'symbol': formatted_symbol}
         result = await self._request('GET', endpoint, params)
 
