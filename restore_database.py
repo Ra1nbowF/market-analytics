@@ -24,11 +24,14 @@ def restore_database():
         conn.autocommit = True
         cur = conn.cursor()
 
-        # Read the production schema file
-        schema_file = Path('database/production_schema.sql')
+        # Use the complete schema file that includes all dashboard fields
+        schema_file = Path('database/complete_dashboard_schema.sql')
+
+        # Fallback to original schema files if complete schema doesn't exist
         if not schema_file.exists():
-            # Try alternative schema without TimescaleDB
-            schema_file = Path('database/production_schema_no_timescale.sql')
+            schema_file = Path('database/production_schema.sql')
+            if not schema_file.exists():
+                schema_file = Path('database/production_schema_no_timescale.sql')
 
         if not schema_file.exists():
             print("ERROR: No schema file found!")
@@ -56,9 +59,16 @@ def restore_database():
                             print(f"  [{i}/{len(statements)}] TimescaleDB not available, using regular tables")
                     else:
                         cur.execute(statement)
-                        print(f"  [{i}/{len(statements)}] Executed: {statement[:50]}...")
+                        if 'CREATE TABLE' in statement:
+                            table_name = statement.split('CREATE TABLE IF NOT EXISTS ')[1].split(' ')[0] if 'IF NOT EXISTS' in statement else statement.split('CREATE TABLE ')[1].split(' ')[0]
+                            print(f"  [{i}/{len(statements)}] Created table: {table_name}")
+                        elif 'CREATE INDEX' in statement:
+                            print(f"  [{i}/{len(statements)}] Created index")
+                        else:
+                            print(f"  [{i}/{len(statements)}] Executed: {statement[:50]}...")
                 except Exception as e:
-                    print(f"  Warning on statement {i}: {e}")
+                    if 'already exists' not in str(e).lower():
+                        print(f"  Warning on statement {i}: {e}")
 
         # Verify tables were created
         cur.execute("""
@@ -73,22 +83,35 @@ def restore_database():
         for table in tables:
             print(f"  - {table[0]}")
 
-        # Apply migration fixes if needed
-        migration_file = Path('database/migration_fix_schema.sql')
-        if migration_file.exists():
-            print("\nApplying migration fixes...")
-            with open(migration_file, 'r') as f:
-                migration_sql = f.read()
+        # Verify critical fields for dashboard
+        print("\nVerifying dashboard-critical fields...")
+        critical_checks = [
+            ('market_data', ['bid_volume', 'ask_volume', 'price_change_pct_24h']),
+            ('mm_metrics', ['spread_bps', 'bid_depth_1pct', 'ask_depth_1pct']),
+            ('mm_performance', ['market_presence', 'avg_spread_bps']),
+            ('long_short_ratio', ['long_account_ratio', 'short_account_ratio']),
+            ('liquidity_depth', ['depth_2pct_bid', 'depth_2pct_ask'])
+        ]
 
-            migration_statements = [s.strip() for s in migration_sql.split(';') if s.strip()]
-            for statement in migration_statements:
-                if statement and not statement.startswith('--'):
-                    try:
-                        cur.execute(statement)
-                    except Exception as e:
-                        # Ignore errors for already existing columns
-                        pass
-            print("Migration fixes applied.")
+        all_good = True
+        for table_name, required_fields in critical_checks:
+            cur.execute("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = %s
+            """, (table_name,))
+
+            existing_columns = {row[0] for row in cur.fetchall()}
+            missing = [f for f in required_fields if f not in existing_columns]
+
+            if missing:
+                print(f"  ⚠️  {table_name}: Missing fields: {', '.join(missing)}")
+                all_good = False
+            else:
+                print(f"  ✅ {table_name}: All critical fields present")
+
+        if all_good:
+            print("\n✅ All dashboard requirements verified!")
 
         cur.close()
         conn.close()
