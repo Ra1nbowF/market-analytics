@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS market_data (
     low_24h DECIMAL(20, 8),
     open_interest DECIMAL(30, 8),
     funding_rate DECIMAL(10, 8),
+    count_24h BIGINT,  -- Added: application might use this
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id, timestamp)
 );
@@ -76,6 +77,7 @@ CREATE TABLE IF NOT EXISTS mm_metrics (
     ask_depth_1pct DECIMAL(20, 8),
     bid_depth_2pct DECIMAL(20, 8),
     ask_depth_2pct DECIMAL(20, 8),
+    uptime_pct DECIMAL(10, 4),  -- Added: application uses this
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id, timestamp)
 );
@@ -115,6 +117,8 @@ CREATE TABLE IF NOT EXISTS long_short_ratio (
     short_account_ratio DECIMAL(10, 4), -- Dashboard uses this
     long_position_ratio DECIMAL(10, 4), -- Dashboard might use this
     short_position_ratio DECIMAL(10, 4), -- Dashboard might use this
+    top_trader_long_ratio DECIMAL(10, 4),  -- Added: application uses this
+    top_trader_short_ratio DECIMAL(10, 4), -- Added: application uses this
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id, timestamp)
 );

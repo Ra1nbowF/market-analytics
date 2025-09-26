@@ -105,18 +105,18 @@ def restore_database():
             missing = [f for f in required_fields if f not in existing_columns]
 
             if missing:
-                print(f"  ⚠️  {table_name}: Missing fields: {', '.join(missing)}")
+                print(f"  WARNING: {table_name}: Missing fields: {', '.join(missing)}")
                 all_good = False
             else:
-                print(f"  ✅ {table_name}: All critical fields present")
+                print(f"  OK: {table_name}: All critical fields present")
 
         if all_good:
-            print("\n✅ All dashboard requirements verified!")
+            print("\n[SUCCESS] All dashboard requirements verified!")
 
         cur.close()
         conn.close()
 
-        print("\n✅ Database schema restored successfully!")
+        print("\n[SUCCESS] Database schema restored successfully!")
         print("\nNext steps:")
         print("1. Restart your backend service to begin data collection")
         print("2. The dashboard will start showing data as it's collected")
@@ -125,7 +125,7 @@ def restore_database():
         return True
 
     except Exception as e:
-        print(f"\n❌ Error restoring database: {e}")
+        print(f"\n[ERROR] Error restoring database: {e}")
         print("\nTroubleshooting:")
         print("1. Make sure the database is accessible")
         print("2. Check if the wipe has completed")
@@ -136,8 +136,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Railway Database Schema Restoration Tool")
     print("=" * 60)
-    print("\n⚠️  This should be run AFTER wiping the volume")
-    print("⚠️  All previous data will be lost\n")
+    print("\nWARNING: This should be run AFTER wiping the volume")
+    print("WARNING: All previous data will be lost\n")
 
     response = input("Have you already wiped the Railway volume? (yes/no): ")
     if response.lower() != 'yes':
