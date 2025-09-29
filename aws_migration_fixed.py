@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Migrate Market Analytics to AWS RDS using local schema
 Uses the complete_dashboard_schema.sql we created earlier
@@ -255,9 +255,9 @@ def verify_schema(conn):
                     WHERE table_name = '{table}'
                 """)
                 col_count = cur.fetchone()[0]
-                print(f"  ✓ {table} ({col_count} columns)")
+                print(f"  âœ“ {table} ({col_count} columns)")
             else:
-                print(f"  ✗ {table} MISSING!")
+                print(f"  âœ— {table} MISSING!")
 
         # Check critical columns for dashboard
         print("\nVerifying critical dashboard columns...")
@@ -281,10 +281,10 @@ def verify_schema(conn):
 
             missing = [col for col in columns if col not in existing_cols]
             if missing:
-                print(f"  ⚠ {table} missing: {', '.join(missing)}")
+                print(f"  âš  {table} missing: {', '.join(missing)}")
                 all_good = False
             else:
-                print(f"  ✓ {table} has all critical columns")
+                print(f"  âœ“ {table} has all critical columns")
 
         cur.close()
         return all_good
@@ -369,9 +369,9 @@ def main():
 
         # Step 4: Verify schema
         if verify_schema(conn):
-            print("\n✅ All critical tables and columns verified!")
+            print("\nâœ… All critical tables and columns verified!")
         else:
-            print("\n⚠ Some columns might be missing, but core tables exist")
+            print("\nâš  Some columns might be missing, but core tables exist")
 
         # Step 5: Insert sample data
         insert_sample_data(conn)

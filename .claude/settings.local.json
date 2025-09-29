@@ -25,7 +25,9 @@
       "WebFetch(domain:deep-index.moralis.io)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(powershell:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

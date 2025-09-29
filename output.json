@@ -1,0 +1,1 @@
+{"statusCode": 200, "body": "{\"message\": \"Market data collection completed\", \"collected\": 1, \"data\": [{\"exchange\": \"gate\", \"symbol\": \"BTCUSDT\", \"last_price\": 112100.7, \"bid_price\": 112097.6, \"ask_price\": 112097.7, \"volume_24h\": 566455328.0, \"timestamp\": \"2025-09-29T12:39:26.864966\"}], \"timestamp\": \"2025-09-29T12:39:26.865048\"}"}
