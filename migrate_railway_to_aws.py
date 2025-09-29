@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Migrate Market Analytics from Railway to AWS RDS
 Preserves existing AWS infrastructure for DEX Analytics

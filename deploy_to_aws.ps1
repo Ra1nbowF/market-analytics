@@ -13,18 +13,19 @@ $TIMEOUT = 300
 $MEMORY = 512
 $DB_PASSWORD = "123456789"  # Update this!
 
-# Step 1: Run database migration
-Write-Host "`nStep 1: Migrating data from Railway to AWS RDS..." -ForegroundColor Yellow
+# Step 1: Setup database schema on AWS RDS
+Write-Host "`nStep 1: Setting up database schema on AWS RDS..." -ForegroundColor Yellow
 
-# Update password in migration script
-$migrationScript = Get-Content "migrate_railway_to_aws.py" -Raw
-$migrationScript = $migrationScript -replace "'password': '123456789'", "'password': '$DB_PASSWORD'"
-$migrationScript | Out-File "migrate_railway_to_aws.py" -Encoding UTF8
+# Update password in setup script
+$setupScript = Get-Content "aws_migration_fixed.py" -Raw
+$setupScript = $setupScript -replace "'password': '123456789'", "'password': '$DB_PASSWORD'"
+$setupScript | Out-File "aws_migration_fixed.py" -Encoding UTF8
 
-# Run migration
-python migrate_railway_to_aws.py
+# Run setup
+python aws_migration_fixed.py
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Migration failed! Please check the error above." -ForegroundColor Red
+    Write-Host "Database setup failed! Please check the error above." -ForegroundColor Red
+    Write-Host "Make sure database/complete_dashboard_schema.sql exists" -ForegroundColor Yellow
     exit 1
 }
 
